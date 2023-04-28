@@ -25,6 +25,11 @@ local UnitLevel = UnitLevel
 local UnitName = UnitName
 local UnitRace = UnitRace
 
+local ErrorLog = function(msg)
+	DEFAULT_CHAT_FRAME:AddMessage(format("Error Gladius Racial module: \"%s\"", msg))
+end
+	
+
 local GetUnitDebuff = function(uId, spellName)
 	for i = 1, 40 do
 		local bfaspellName = UnitDebuff(uId, i)
@@ -59,7 +64,8 @@ local unitRaceCDs = {
 	["KULTIRAN"] = { cooldown = 160, spellID = 287712, sharesCD = false },
 	["MECHAGNOME"] = { cooldown = 180, spellID = 312924, sharesCD = false },
 	["VULPERA"] = { cooldown = 90, spellID = 312411, sharesCD = false },
-	["DRACTHYR"] = { cooldown = 90, spellID = 357214, sharesCD = false }
+	["DRACTHYR"] = { cooldown = 90, spellID = 357214, sharesCD = false },
+	["DEFAULT"] = { cooldown = 90, spellID = 59752, SharesCD = false }
 }
 
 local Racial = Gladius:NewModule("Racial", false, true, {
@@ -107,35 +113,56 @@ function Racial:IsDetached()
 	return Gladius.db.RacialDetached
 end
 
-function Racial:GetFrame(unit)
-	return self.frame[unit]
+function Racial:GetUnitRaceCD(race)
+	local unitRaceCD = unitRaceCDs[race]
+	if nil == unitRaceCD then
+		ErrorLog(format("Attempted lookup on race: `%s`, but this race is not configured", "race"))
+		return unitRaceCD["DEFAULT"]
+	end
+	return unitRaceCD
 end
 
-function Racial:UNIT_NAME_UPDATE(event, unit)
+function Racial:FindUnitRace(unit)
 	-- Find Unit Race
 	local _, instanceType = IsInInstance()
 	if instanceType ~= "arena" or not strfind(unit, "arena") or strfind(unit, "pet") then
 		return
 	end
-	local _, race =  UnitRace(unit)
-	race = string.upper(race)
-	local _, _, spellTexture = GetSpellInfo(unitRaceCDs[race].spellID)
-	self.frame[unit].race = race
-	self.frame[unit].texture:SetTexture(spellTexture)
+	local _, race = UnitRace(unit)
+	if nil == race then
+		ErrorLog("Unable to find unit race")
+		return unitRaceCDs["DEFAULT"]
+	end
+	return string.upper(race)
+end
+
+function Racial:GetSpellTextureByRace(race)
+	local unitRaceCD = Racial:GetUnitRaceCD(race)
+	local _, _, spellTexture = GetSpellInfo(unitRaceCD.spellID)
+	if nil == spellTexture then
+		ErrorLog(format("Unable to GetSpellInfo for race: `%s`", race))
+		_, _, spellTexture = GetSpellInfo(unitRaceCD["DEFAULT"].spellID)
+	end
+	return spellTexture
+end
+
+function Racial:UpdateFrameByUnit(frame, unit)
+	local race = Racial:FindUnitRace(unit)
+	if (frame[unit]) then
+		frame[unit].race = race
+		frame[unit].texture:SetTexture(Racial:GetSpellTextureByRace(race))
+	end
+end
+
+function Racial:UNIT_NAME_UPDATE(event, unit)
+	Racial:UpdateFrameByUnit(self.frame, unit)
 end
 
 function Racial:AutoFixAll()
 	local _, instanceType = IsInInstance()
 	if instanceType ~= "arena" then return end
 	for i = 1, 3 do
-		local unit = 'arena'..i
-		local _,race =  UnitRace(unit)
-		race = string.upper(race or 'HUMAN')
-		local _, _, spellTexture = GetSpellInfo(unitRaceCDs[race].spellID)
-		if (self.frame[unit]) then
-			self.frame[unit].race = race
-			self.frame[unit].texture:SetTexture(spellTexture)
-		end
+		Racial:UpdateFrameByUnit(self.frame, 'arena'..i)
 	end
 end
 
