@@ -1,6 +1,6 @@
-## Interface: 100002
+## Interface: 100007
 ## Title: Gladius
-## Version: 8.0.1
+## Version: 8.0.2-rc.1
 ## Notes: Arena enemy unit frames.
 ## Author: Resike and Firebunny. Original author: Proditor
 ## SavedVariables: Gladius2DB
