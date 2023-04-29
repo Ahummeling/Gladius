@@ -117,7 +117,7 @@ function Racial:GetUnitRaceCD(race)
 	local unitRaceCD = unitRaceCDs[race]
 	if nil == unitRaceCD then
 		ErrorLog(format("Attempted lookup on race: `%s`, but this race is not configured", "race"))
-		return unitRaceCD["DEFAULT"]
+		return unitRaceCDs["DEFAULT"]
 	end
 	return unitRaceCD
 end
